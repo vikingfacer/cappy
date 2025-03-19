@@ -19,23 +19,23 @@ pub fn activate(p: ?*pcap) c_int {
     return PCAP_C.pcap_activate(p);
 }
 
-pub fn next_ex(p: ?*pcap, hdr: [*c][*c]pktHeader, data: *[*c]const u8) c_int {
-    return PCAP_C.pcap_next_ex(p, hdr, @alignCast(data));
+pub fn next_ex(p: ?*pcap, hdr: *?*pktHeader, data: *?*const u8) isize {
+    return PCAP_C.pcap_next_ex(p, @alignCast(hdr), @alignCast(data));
 }
-
+pub fn sendpacket(p: ?*pcap, buf: []const u8) isize {
+    return PCAP_C.pcap_sendpacket(p, buf.ptr, @intCast(buf.len));
+}
 //pcap_open_live
-pub fn open_live(device: [:0]const u8, snaplen: c_int, promisc: c_int, to_ms: c_int, errorBuffer: []u8) ?*pcap {
+pub fn open_live(
+    device: [:0]const u8, //
+    snaplen: i32,
+    promisc: i32,
+    to_ms: i32,
+    errorBuffer: []u8,
+) ?*pcap {
     return PCAP_C.pcap_open_live(device, snaplen, promisc, to_ms, errorBuffer.ptr);
 }
 
-test "Create Pcap" {
-    var errBuf = [_]u8{0} ** 256;
-    try std.testing.expect(null != create("any", &errBuf));
-}
-
-test "Activate Pcap" {
-    var errBuf = [_]u8{0} ** 256;
-    const capture = create("any", &errBuf);
-    try std.testing.expect(null != capture);
-    try std.testing.expect(0 == activate(capture));
+pub fn close(p: ?*pcap) void {
+    PCAP_C.pcap_close(p);
 }

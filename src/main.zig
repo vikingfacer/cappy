@@ -1,11 +1,7 @@
-//! By convention, main.zig is where your main function lives in the case that
-//! you are building an executable. If you are making a library, the convention
-//! is to delete this file and start with root.zig instead.
+const std = @import("std");
+const pcap = @import("replayer_lib");
 
 pub fn main() !void {
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
@@ -16,17 +12,18 @@ pub fn main() !void {
         try bw.flush();
         return anyerror.GeneralFailure;
     };
+
+    defer pcap.close(cap);
+
     _ = pcap.activate(cap);
-    var hdr: [*c]pcap.pktHeader = undefined;
-    var ptr: [*c]const u8 = undefined;
-    while (pcap.next_ex(cap, //
-        @as([*c][*c]pcap.pktHeader, &hdr), //
-        &ptr) >= 0)
-    {
+    var hdr: ?*pcap.pktHeader = undefined;
+    var ptr: ?*const u8 = undefined;
+    while (pcap.next_ex(cap, &hdr, &ptr) >= 0) {
         try stdout.print("Hdr: {} \n", .{hdr.?.*.len});
         try bw.flush();
+        var slice: []const u8 = undefined;
+        slice.ptr = @ptrCast(ptr);
+        slice.len = hdr.?.*.len;
+        _ = pcap.sendpacket(cap, slice);
     }
 }
-
-const std = @import("std");
-const pcap = @import("replayer_lib");
