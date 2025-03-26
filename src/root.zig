@@ -12,9 +12,14 @@ pub const pcap = PCAP_C.pcap_t;
 pub const pktHeader = PCAP_C.pcap_pkthdr;
 pub const bfp_program = PCAP_C.bpf_program;
 pub const pcapHandler = PCAP_C.pcap_handler;
+pub const pcap_if = PCAP_C.pcap_if_t;
 
 pub fn create(pcapFile: [:0]const u8, errorBuffer: []u8) ?*pcap {
     return PCAP_C.pcap_create(pcapFile, errorBuffer.ptr);
+}
+
+pub fn findalldevs(devs: *?*pcap_if, errbuf: []u8) isize {
+    return PCAP_C.pcap_findalldevs(@alignCast(devs), errbuf.ptr);
 }
 
 pub fn activate(p: ?*pcap) c_int {
@@ -35,7 +40,7 @@ pub fn loop(p: ?*pcap, cnt: c_int, hdlr: ?*pcapHandler, user: [:0]u8) isize {
     return PCAP_C.pcap_loop(p, cnt, hdlr, user);
 }
 
-pub fn dispatch(p: ?*pcap, cnt: c_int, hdlr: pcapHandler, user: [:0]u8) isize {
+pub fn dispatch(p: ?*pcap, cnt: c_int, hdlr: pcapHandler, user: ?[*]u8) isize {
     return PCAP_C.pcap_dispatch(p, cnt, hdlr, user);
 }
 
