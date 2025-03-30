@@ -1,5 +1,5 @@
 const std = @import("std");
-const pcap = @import("replayer_lib");
+const pcap = @import("zapcap");
 
 pub fn main() !void {
     const stdout_file = std.io.getStdOut().writer();
