@@ -6,24 +6,31 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
-    var errBuff = [_]u8{0} ** 256;
-    const cap: *pcap.pcap = pcap.open_live("lo", 4096, 1, 1000, &errBuff) orelse {
-        try stdout.print("Error: {s} \n", .{errBuff});
+    var errBuf = [_]u8{0} ** 256;
+    const cap: pcap.pcapture = pcap.open_live("lo", 4096, 1, 1000, &errBuf) orelse {
+        try stdout.print("Error: {s} \n", .{errBuf});
         try bw.flush();
         return anyerror.GeneralFailure;
     };
+    defer pcap.pcapture.close(cap);
 
-    defer pcap.close(cap);
+    var fp = cap.compile("port 23", 0, 0);
+    _ = cap.setfilter(&fp.?);
 
-    _ = pcap.activate(cap);
     var hdr: ?*pcap.pktHeader = undefined;
-    var ptr: ?*const u8 = undefined;
-    while (pcap.next_ex(cap, &hdr, &ptr) >= 0) {
+    var data: ?*const u8 = undefined;
+    while (cap.next_ex(&hdr, &data) >= 0) {
         try stdout.print("Hdr: {} \n", .{hdr.?.*.len});
         try bw.flush();
         var slice: []const u8 = undefined;
-        slice.ptr = @ptrCast(ptr);
+        slice.ptr = @ptrCast(data);
         slice.len = hdr.?.*.len;
-        _ = pcap.sendpacket(cap, slice);
+        _ = cap.sendpacket(slice);
     }
+}
+
+export fn pck(user: [*c]u8, pkt: [*c]const pcap.pktHeader, bytes: [*c]const u8) void {
+    _ = user;
+    _ = pkt;
+    std.log.debug("{s} {s}\n", .{ "pck", bytes });
 }
