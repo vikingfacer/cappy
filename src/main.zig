@@ -1,31 +1,53 @@
 const std = @import("std");
 const pcap = @import("zapcap");
+const clap = @import("clap");
 
 pub fn main() !void {
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    const stdout = std.io.getStdOut().writer();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
 
-    var errBuf = [_]u8{0} ** 256;
-    const cap: pcap.pcapture = pcap.open_live("lo", 4096, 1, 1000, &errBuf) orelse {
-        try stdout.print("Error: {s} \n", .{errBuf});
-        try bw.flush();
-        return anyerror.GeneralFailure;
+    // First we specify what parameters our program can take.
+    // We can use `parseParamsComptime` to parse a string into an array of `Param(Help)`.
+    const params = comptime clap.parseParamsComptime(
+        \\-h, --help            Display this help and exit.
+        \\-l, --list            list devices to listen upon
+        \\-d, --device <STR>    use specified device
+        \\-p, --program <STR>   dynamically loaded program
+        \\<STR>...           filter network traffic
+    );
+
+    // Declare our own parsers which are used to map the argument strings to other
+    // types.
+    const parsers = comptime .{
+        .STR = clap.parsers.string,
     };
-    defer pcap.pcapture.close(cap);
 
-    var fp = cap.compile("port 23", 0, 0);
-    _ = cap.setfilter(&fp.?);
+    var diag = clap.Diagnostic{};
+    var res = clap.parse(clap.Help, &params, parsers, .{
+        .diagnostic = &diag,
+        .allocator = gpa.allocator(),
+        // The assignment separator can be configured. `--number=1` and `--number:1` is now
+        // allowed.
+        .assignment_separators = "=:",
+    }) catch |err| {
+        diag.report(std.io.getStdErr().writer(), err) catch {};
+        return err;
+    };
+    defer res.deinit();
 
-    var hdr: ?*pcap.pktHeader = undefined;
-    var data: ?*const u8 = undefined;
-    while (cap.next_ex(&hdr, &data) >= 0) {
-        try stdout.print("Hdr: {} \n", .{hdr.?.*.len});
-        try bw.flush();
-        var slice: []const u8 = undefined;
-        slice.ptr = @ptrCast(data);
-        slice.len = hdr.?.*.len;
-        _ = cap.sendpacket(slice);
+    if (res.args.help != 0)
+        std.debug.print("--help\n", .{});
+    if (res.args.list != 0) {
+        try listdevices(stdout);
+    }
+    if (res.args.device) |d|
+        std.debug.print("--device= {s}\n", .{d});
+    if (res.args.program) |p|
+        std.debug.print("--program= {s}\n", .{p});
+    for (res.positionals[0]) |filter|
+        std.debug.print("{s}\n", .{filter});
+}
     }
 }
 

@@ -29,6 +29,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const clap = b.dependency("clap", .{});
 
     exe_mod.addImport("zapcap", lib_mod);
 
@@ -44,6 +45,7 @@ pub fn build(b: *std.Build) void {
         .name = "replayer",
         .root_module = exe_mod,
     });
+    exe.root_module.addImport("clap", clap.module("clap"));
 
     b.installArtifact(exe);
 
