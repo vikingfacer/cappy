@@ -14,6 +14,17 @@ pub const bfp_program = PCAP_C.bpf_program;
 pub const pcapHandler = PCAP_C.pcap_handler;
 pub const pcap_if = PCAP_C.pcap_if_t;
 
+// pcap if constant flags
+pub const IF_LOOPBACK = PCAP_C.PCAP_IF_LOOPBACK;
+pub const IF_UP = PCAP_C.PCAP_IF_UP;
+pub const IF_RUNNING = PCAP_C.PCAP_IF_RUNNING;
+pub const IF_WIRELESS = PCAP_C.PCAP_IF_WIRELESS;
+pub const IF_CONNECTION_STATUS = PCAP_C.PCAP_IF_CONNECTION_STATUS;
+pub const IF_CONNECTION_STATUS_UNKNOWN = PCAP_C.PCAP_IF_CONNECTION_STATUS_UNKNOWN;
+pub const IF_CONNECTION_STATUS_CONNECTED = PCAP_C.PCAP_IF_CONNECTION_STATUS_CONNECTED;
+pub const IF_CONNECTION_STATUS_DISCONNECTED = PCAP_C.PCAP_IF_CONNECTION_STATUS_DISCONNECTED;
+pub const IF_CONNECTION_STATUS_NOT_APPLICABLE = PCAP_C.PCAP_IF_CONNECTION_STATUS_NOT_APPLICABLE;
+
 pub fn create(pcapFile: [:0]const u8, errorBuffer: []u8) ?pcapture {
     if (PCAP_C.pcap_create(pcapFile, errorBuffer.ptr)) |p| {
         return pcapture{
