@@ -1,6 +1,7 @@
 const std = @import("std");
 const pcap = @import("zapcap");
 const clap = @import("clap");
+const listdev = @import("listDevices.zig");
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -39,48 +40,11 @@ pub fn main() !void {
     if (res.args.help != 0)
         std.debug.print("--help\n", .{});
     if (res.args.list != 0) {
-        try listdevices(stdout);
+        try listdev.listdevices(stdout);
     }
-    if (res.args.device) |d|
-        std.debug.print("--device= {s}\n", .{d});
-    if (res.args.program) |p|
-        std.debug.print("--program= {s}\n", .{p});
-    for (res.positionals[0]) |filter|
-        std.debug.print("{s}\n", .{filter});
-}
 
-fn listdevices(out: anytype) !void {
-    var dev: ?*pcap.pcap_if = undefined;
-    var errorBuffer = [_]u8{0} ** 2048;
-    if (pcap.findalldevs(&dev, &errorBuffer) == 0) {
-        while (dev.?.next != null) {
-            try out.print("{s: <10} ", .{dev.?.name});
 
-            try out.print("{s}", .{"<"});
-            if (dev.?.flags & pcap.IF_LOOPBACK == pcap.IF_LOOPBACK)
-                try out.print("{s},", .{"LOOPBACK"});
 
-            try out.print("{s},", .{if (dev.?.flags & pcap.IF_UP == pcap.IF_UP)
-                "UP"
-            else
-                "DOWN"});
-
-            if (dev.?.flags & pcap.IF_RUNNING == pcap.IF_RUNNING)
-                try out.print("{s},", .{"RUNNING"});
-
-            if (dev.?.flags & pcap.IF_WIRELESS == pcap.IF_WIRELESS)
-                try out.print("{s},", .{"WIRELESS"});
-
-            try out.print("{s}", .{switch (dev.?.flags & pcap.IF_CONNECTION_STATUS) {
-                pcap.IF_CONNECTION_STATUS_UNKNOWN => "UNKNOWN",
-                pcap.IF_CONNECTION_STATUS_CONNECTED => "CONNECTED",
-                pcap.IF_CONNECTION_STATUS_DISCONNECTED => "DISCONNECTED",
-                pcap.IF_CONNECTION_STATUS_NOT_APPLICABLE => "NOT APPLICABLE",
-                else => "UNKNOWN",
-            }});
-
-            try out.print("{s}\n", .{">"});
-            dev = dev.?.next;
         }
     }
 }
