@@ -15,7 +15,7 @@ pub fn main() !void {
         \\-l, --list            list devices to listen upon
         \\-d, --device <STR>    use specified device
         \\-p, --program <STR>   dynamically loaded program
-        \\<STR>...           filter network traffic
+        \\-f, --filter <STR>     filter network traffic
     );
 
     // Declare our own parsers which are used to map the argument strings to other
@@ -43,9 +43,30 @@ pub fn main() !void {
         try listdev.listdevices(stdout);
     }
 
+    const device: [:0]const u8 =
+        try gpa.allocator().dupeZ(u8, res.args.device orelse "any");
+    defer gpa.allocator().free(device);
+    errdefer gpa.allocator().free(device);
 
+    const filter: [:0]const u8 = try gpa.allocator().dupeZ(u8, res.args.filter orelse "");
+    defer gpa.allocator().free(filter);
+    errdefer gpa.allocator().free(filter);
 
+    var errorBuffer = [_]u8{0} ** 2048;
+    if (pcap.open_live(device, 4096, 1, 1000, &errorBuffer)) |liveCapture| {
+        defer liveCapture.close();
+        var compiled_filter: pcap.bfp_program = undefined;
+        if (liveCapture.compile(filter, 0, 0)) |f| {
+            compiled_filter = f;
+            _ = liveCapture.setfilter(&compiled_filter);
+            var header: ?*pcap.pktHeader = null;
+            var data: ?*const u8 = null;
+            while (liveCapture.next_ex(&header, &data) >= 0) {
+                try stdout.print("{*}\n", .{data});
+            }
         }
+    } else {
+        try stdout.print("{s}\n", .{"Could not open device"});
     }
 }
 
