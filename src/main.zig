@@ -2,6 +2,7 @@ const std = @import("std");
 const pcap = @import("zapcap");
 const clap = @import("clap");
 const listdev = @import("listDevices.zig");
+const capture = @import("capture.zig");
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -52,22 +53,7 @@ pub fn main() !void {
     defer gpa.allocator().free(filter);
     errdefer gpa.allocator().free(filter);
 
-    var errorBuffer = [_]u8{0} ** 2048;
-    if (pcap.open_live(device, 4096, 1, 1000, &errorBuffer)) |liveCapture| {
-        defer liveCapture.close();
-        var compiled_filter: pcap.bfp_program = undefined;
-        if (liveCapture.compile(filter, 0, 0)) |f| {
-            compiled_filter = f;
-            _ = liveCapture.setfilter(&compiled_filter);
-            var header: ?*pcap.pktHeader = null;
-            var data: ?*const u8 = null;
-            while (liveCapture.next_ex(&header, &data) >= 0) {
-                try stdout.print("{*}\n", .{data});
-            }
-        }
-    } else {
-        try stdout.print("{s}\n", .{"Could not open device"});
-    }
+    try capture.live(stdout, device, filter);
 }
 
 export fn pck(user: [*c]u8, pkt: [*c]const pcap.pktHeader, bytes: [*c]const u8) void {
