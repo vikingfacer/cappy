@@ -82,7 +82,7 @@ pub const pcapture = struct {
         return PCAP_C.pcap_setfilter(self.cap, fp);
     }
 
-    pub fn next_ex(self: Self, hdr: *?*pktHeader, data: *?*const u8) isize {
+    pub fn next_ex(self: Self, hdr: *?*pktHeader, data: *?[*]const u8) isize {
         return PCAP_C.pcap_next_ex(self.cap, @alignCast(hdr), @alignCast(data));
     }
 
