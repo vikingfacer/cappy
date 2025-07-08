@@ -23,3 +23,12 @@ pub fn live(out: anytype, liveCapture: pcap.pcapture, filter: [:0]const u8) !voi
         try out.print("{s}\n", .{"Could not open device"});
     }
 }
+
+pub fn dispatcher(disCapture: pcap.pcapture, library: [:0]u8, program: [:0]u8) !void {
+    var dlib = try std.DynLib.openZ(library);
+
+    const dispatch_fn: pcap.pcapHandler = dlib.lookup(pcap.pcapHandler, program).?;
+    while (true) {
+        _ = disCapture.dispatch(0, dispatch_fn, null);
+    }
+}
