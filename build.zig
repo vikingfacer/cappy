@@ -24,14 +24,19 @@ pub fn build(b: *std.Build) void {
     lib_mod.linkSystemLibrary("libpcap", .{});
     lib_mod.link_libc = true;
 
-    const exe_mod = b.createModule(.{
-        .root_source_file = b.path("src/main.zig"),
+    const modDispatch = b.createModule(.{
+        .root_source_file = b.path("dispatchLib/pck.zig"),
         .target = target,
         .optimize = optimize,
     });
-    const clap = b.dependency("clap", .{});
+    modDispatch.addImport("zapcap", lib_mod);
 
-    exe_mod.addImport("zapcap", lib_mod);
+    const libDispatch = b.addSharedLibrary(.{
+        .name = "dispatcher",
+        .root_module = modDispatch,
+    });
+
+    b.installArtifact(libDispatch);
 
     const lib = b.addLibrary(.{
         .linkage = .static,
@@ -40,6 +45,16 @@ pub fn build(b: *std.Build) void {
     });
 
     b.installArtifact(lib);
+
+    const exe_mod = b.createModule(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe_mod.addImport("zapcap", lib_mod);
+
+    const clap = b.dependency("clap", .{});
 
     const exe = b.addExecutable(.{
         .name = "replayer",
