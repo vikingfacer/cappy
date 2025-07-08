@@ -47,17 +47,26 @@ pub fn main() !void {
     const device: [:0]const u8 =
         try gpa.allocator().dupeZ(u8, res.args.device orelse "any");
     defer gpa.allocator().free(device);
-    errdefer gpa.allocator().free(device);
 
-    const filter: [:0]const u8 = try gpa.allocator().dupeZ(u8, res.args.filter orelse "");
-    defer gpa.allocator().free(filter);
-    errdefer gpa.allocator().free(filter);
+    std.debug.print("device: {s}\n", .{device});
+    var errorBuffer = [_]u8{0} ** 2048;
+    const cap = pcap.open_live(device, 4096, 1, 1000, &errorBuffer).?;
+    defer cap.close();
 
-    try capture.live(stdout, device, filter);
-}
+    const file: [:0]const u8 = try gpa.allocator().dupeZ(u8, res.args.file orelse "");
+    defer gpa.allocator().free(file);
 
-export fn pck(user: [*c]u8, pkt: [*c]const pcap.pktHeader, bytes: [*c]const u8) void {
-    _ = user;
-    _ = pkt;
-    std.log.debug("{s} {s}\n", .{ "pck", bytes });
+    if (res.args.program != 0) {
+        const libraryName =
+            try gpa.allocator().dupeZ(u8, res.positionals[0][0]);
+        defer gpa.allocator().free(libraryName);
+        const programName =
+            try gpa.allocator().dupeZ(u8, res.positionals[0][1]);
+        defer gpa.allocator().free(programName);
+        try capture.dispatcher(cap, libraryName, programName);
+    } else if (res.args.file != null) {} else {
+        const filter = try std.mem.joinZ(gpa.allocator(), ",", res.positionals[0]);
+        defer gpa.allocator().free(file);
+        try capture.live(stdout, cap, filter);
+    }
 }
