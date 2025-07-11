@@ -10,4 +10,5 @@ jobs:
     steps:
       - run: sudo apt install -y libpcap-dev  
       - uses: mlugg/setup-zig@v2
+      - uses: actions/checkout@v4
       - run: zig build
