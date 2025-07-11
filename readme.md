@@ -1,5 +1,7 @@
 
 # Cappy _the crappy network capture_
+![ci](https://github.com/vikingfacer/cappy/actions/workflows/ci.yml/badge.svg)
+
 ![CappyImage](img/cappy1.jpg)
 
 Cappy is 🚧 (WORK IN PROGRESS)
