@@ -2,7 +2,7 @@ const std = @import("std");
 const pcap = @import("zapcap");
 const clap = @import("clap");
 const listdev = @import("listDevices.zig");
-const capture = @import("capture.zig");
+const runner = @import("capture.zig");
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
@@ -13,10 +13,12 @@ pub fn main() !void {
     // We can use `parseParamsComptime` to parse a string into an array of `Param(Help)`.
     const params = comptime clap.parseParamsComptime(
         \\-h, --help            Display this help and exit.
-        \\-l, --list            list devices to listen upon
-        \\-d, --device <STR>    use specified device
-        \\-p, --program <STR>   dynamically loaded program
-        \\-f, --filter <STR>     filter network traffic
+        \\-l, --list            List devices to listen upon
+        \\-p, --program <STR>   Dynamically loaded program
+        \\-d, --device <STR>    Use specified device
+        \\-i, --input <STR>     Pcap File
+        \\-o, --output <STR>    output Pcap File
+        \\<STR>...
     );
 
     // Declare our own parsers which are used to map the argument strings to other
@@ -44,29 +46,43 @@ pub fn main() !void {
         try listdev.listdevices(stdout);
     }
 
-    const device: [:0]const u8 =
-        try gpa.allocator().dupeZ(u8, res.args.device orelse "any");
-    defer gpa.allocator().free(device);
+    const device: []const u8 = res.args.device orelse "any";
 
-    std.debug.print("device: {s}\n", .{device});
     var errorBuffer = [_]u8{0} ** 2048;
-    const cap = pcap.open_live(device, 4096, 1, 1000, &errorBuffer).?;
-    defer cap.close();
+    var capture: pcap.pcapture = undefined;
+    if (res.args.input) |file| {
+        if (pcap.create(file, &errorBuffer)) |fileOpen| {
+            capture = fileOpen;
+        } else {
+            try stdout.print("Unable to open file: {s}\n", .{file});
+            try stdout.print("{s}\n", .{errorBuffer});
+        }
+    } else {
+        if (pcap.open_live(device, 4096, 1, 1000, &errorBuffer)) |liveOpen| {
+            capture = liveOpen;
+        } else {
+            try stdout.print("Unable to open device program requires root access\n", .{});
+            try stdout.print("{s}\n", .{errorBuffer});
+        }
+    }
+    defer capture.close();
 
-    const file: [:0]const u8 = try gpa.allocator().dupeZ(u8, res.args.file orelse "");
-    defer gpa.allocator().free(file);
+    const filter = std.mem.joinZ(gpa.allocator(), " ", res.positionals[0]) catch "";
+    defer gpa.allocator().free(filter);
+    if (capture.compile(filter, 0, 0)) |f| {
+        var nonConstf = f;
+        _ = capture.setfilter(&nonConstf);
+    } else {
+        try stdout.print("Unable to set filter {s}", .{filter});
+    }
 
-    if (res.args.program != 0) {
-        const libraryName =
-            try gpa.allocator().dupeZ(u8, res.positionals[0][0]);
-        defer gpa.allocator().free(libraryName);
-        const programName =
-            try gpa.allocator().dupeZ(u8, res.positionals[0][1]);
-        defer gpa.allocator().free(programName);
-        try capture.dispatcher(cap, libraryName, programName);
-    } else if (res.args.file != null) {} else {
-        const filter = try std.mem.joinZ(gpa.allocator(), ",", res.positionals[0]);
-        defer gpa.allocator().free(file);
-        try capture.live(stdout, cap, filter);
+    if (res.args.program) |program| {
+        var seq = std.mem.splitSequence(u8, program, ":");
+        try stdout.print("{?s} {?s}", .{ seq.first(), seq.next() });
+        const lib = seq.first();
+        const fun = seq.next().?;
+        try runner.dispatcher(capture, lib, fun);
+    } else {
+        try runner.live(stdout, capture);
     }
 }

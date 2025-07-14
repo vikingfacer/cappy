@@ -26,7 +26,7 @@ pub const IF_CONNECTION_STATUS_DISCONNECTED = PCAP_C.PCAP_IF_CONNECTION_STATUS_D
 pub const IF_CONNECTION_STATUS_NOT_APPLICABLE = PCAP_C.PCAP_IF_CONNECTION_STATUS_NOT_APPLICABLE;
 
 pub fn create(pcapFile: []const u8, errorBuffer: []u8) ?pcapture {
-    if (PCAP_C.pcap_create(pcapFile, errorBuffer.ptr)) |p| {
+    if (PCAP_C.pcap_create(@alignCast(pcapFile), errorBuffer.ptr)) |p| {
         return pcapture{
             .cap = p,
         };
@@ -43,7 +43,7 @@ pub fn open_live(
     to_ms: i32,
     errorBuffer: []u8,
 ) ?pcapture {
-    if (PCAP_C.pcap_open_live(device, snaplen, promisc, to_ms, errorBuffer.ptr)) |p| {
+    if (PCAP_C.pcap_open_live(@alignCast(device), snaplen, promisc, to_ms, errorBuffer.ptr)) |p| {
         return pcapture{
             .cap = p,
         };
