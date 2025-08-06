@@ -1,19 +1,43 @@
 const std = @import("std");
 const pcap = @import("zapcap");
+const EtherStruct = @import("etherStruct");
+
+fn printPacket(out: anytype, data: []const u8) !void {
+    const ethHeader = std.mem.bytesToValue(EtherStruct.ethFrame, data);
+    try out.print("{}\n", .{ethHeader});
+    const frameType: EtherStruct.EthFrametype = @enumFromInt(ethHeader.frameType);
+    switch (frameType) {
+        EtherStruct.EthFrametype.IPv4 => {
+            try printIp(out, data[@sizeOf(EtherStruct.ethFrame)..]);
+        },
+        else => {},
+    }
+}
+
+fn printIp(out: anytype, data: []const u8) !void {
+    const ipHeader = std.mem.bytesToValue(EtherStruct.ipHeader, //
+        data);
+    try out.print("{}\n", .{ipHeader});
+    const ipProto: EtherStruct.ipProtocol = @enumFromInt(ipHeader.protocol);
+    switch (ipProto) {
+        EtherStruct.ipProtocol.ICMP => {
+            try out.print("{}\n", .{std.mem.bytesToValue(EtherStruct.icmpHeader, data)});
+        },
+        EtherStruct.ipProtocol.TCP => {
+            try out.print("{}\n", .{std.mem.bytesToValue(EtherStruct.tcpHeader, data)});
+        },
+        EtherStruct.ipProtocol.UDP => try out.print("{s}\n", .{"unable to print"}),
+        _ => try out.print("{s}\n", .{"unable to print"}),
+    }
+}
 
 pub fn live(out: anytype, liveCapture: pcap.pcapture) !void {
     var header: ?*pcap.pktHeader = null;
     var data: ?[*]const u8 = null;
     while (liveCapture.next_ex(&header, &data) >= 0) {
-        for (0..header.?.caplen) |i| {
-            if (i % 16 == 0) {
-                try out.print("\n{x:0>8} ", .{i});
-            }
-            try out.print("{x:02}", .{data.?[i]});
-            if ((i + 1) % 2 == 0) {
-                try out.print(" ", .{});
-            }
-        }
+        // skip first byte: first byte shows pcap capture device
+        const packetSlice: []const u8 = data.?[1..header.?.caplen];
+        try printPacket(out, packetSlice);
     }
 }
 
