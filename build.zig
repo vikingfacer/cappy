@@ -55,12 +55,14 @@ pub fn build(b: *std.Build) void {
     exe_mod.addImport("zapcap", lib_mod);
 
     const clap = b.dependency("clap", .{});
+    const etherStruct = b.dependency("EtherStruct", .{});
 
     const exe = b.addExecutable(.{
-        .name = "replayer",
+        .name = "cappy",
         .root_module = exe_mod,
     });
     exe.root_module.addImport("clap", clap.module("clap"));
+    exe.root_module.addImport("etherStruct", etherStruct.module("EtherStruct"));
 
     b.installArtifact(exe);
 
