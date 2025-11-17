@@ -2,9 +2,10 @@ const std = @import("std");
 const pcap = @import("zapcap");
 const EtherStruct = @import("etherStruct");
 
-fn printPacket(out: anytype, data: []const u8) !void {
+pub fn printPacket(out: *std.Io.Writer, data: []const u8) !void {
     const ethHeader = std.mem.bytesToValue(EtherStruct.ethFrame, data);
-    try out.print("{}\n", .{ethHeader});
+    try out.print("{any}\n", .{ethHeader});
+    out.flush() catch |err| std.debug.print("Error: {}\n", .{err});
     const frameType: EtherStruct.EthFrametype = @enumFromInt(ethHeader.frameType);
     switch (frameType) {
         EtherStruct.EthFrametype.IPv4 => {
@@ -14,21 +15,23 @@ fn printPacket(out: anytype, data: []const u8) !void {
     }
 }
 
-fn printIp(out: anytype, data: []const u8) !void {
+fn printIp(out: *std.Io.Writer, data: []const u8) !void {
     const ipHeader = std.mem.bytesToValue(EtherStruct.ipHeader, //
         data);
-    try out.print("{}\n", .{ipHeader});
+    try out.print("{any}\n", .{ipHeader});
+    out.flush() catch |err| std.debug.print("Error: {}\n", .{err});
     const ipProto: EtherStruct.ipProtocol = @enumFromInt(ipHeader.protocol);
     switch (ipProto) {
         EtherStruct.ipProtocol.ICMP => {
-            try out.print("{}\n", .{std.mem.bytesToValue(EtherStruct.icmpHeader, data)});
+            try out.print("{any}\n", .{std.mem.bytesToValue(EtherStruct.icmpHeader, data)});
         },
         EtherStruct.ipProtocol.TCP => {
-            try out.print("{}\n", .{std.mem.bytesToValue(EtherStruct.tcpHeader, data)});
+            try out.print("{any}\n", .{std.mem.bytesToValue(EtherStruct.tcpHeader, data)});
         },
         EtherStruct.ipProtocol.UDP => try out.print("{s}\n", .{"unable to print"}),
         _ => try out.print("{s}\n", .{"unable to print"}),
     }
+    out.flush() catch |err| std.debug.print("Error: {}\n", .{err});
 }
 
 pub fn live(out: anytype, liveCapture: pcap.pcapture) !void {
