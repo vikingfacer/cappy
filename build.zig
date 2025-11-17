@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    lib_mod.linkSystemLibrary("libpcap", .{});
+    lib_mod.linkSystemLibrary("pcap", .{});
     lib_mod.link_libc = true;
 
     const modDispatch = b.createModule(.{
@@ -31,7 +31,8 @@ pub fn build(b: *std.Build) void {
     });
     modDispatch.addImport("zapcap", lib_mod);
 
-    const libDispatch = b.addSharedLibrary(.{
+    const libDispatch = b.addLibrary(.{
+        .linkage = .dynamic,
         .name = "dispatcher",
         .root_module = modDispatch,
     });
