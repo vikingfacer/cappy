@@ -52,6 +52,20 @@ pub fn open_live(
     }
 }
 
+//pcap_open_offline
+pub fn open_offline(
+    file: []const u8, //
+    errorBuffer: []u8,
+) ?pcapture {
+    if (PCAP_C.pcap_open_offline(@alignCast(file), errorBuffer.ptr)) |p| {
+        return pcapture{
+            .cap = p,
+        };
+    } else {
+        return null;
+    }
+}
+
 pub fn findalldevs(devs: *?*pcap_if, errbuf: []u8) isize {
     return PCAP_C.pcap_findalldevs(@alignCast(devs), errbuf.ptr);
 }
