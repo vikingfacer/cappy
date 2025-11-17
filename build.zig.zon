@@ -37,8 +37,13 @@
     // internet connectivity.
     .dependencies = .{
         .clap = .{
-            .url = "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.10.0.tar.gz",
-            .hash = "clap-0.10.0-oBajB434AQBDh-Ei3YtoKIRxZacVPF1iSwp3IX_ZB8f0",
+            .url = "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.11.0.tar.gz",
+            .hash = "clap-0.11.0-oBajB-HnAQDPCKYzwF7rO3qDFwRcD39Q0DALlTSz5H7e",
+
+        },
+        .EtherStruct = .{
+            .url = "git+https://github.com/vikingfacer/EtherStruct/?ref=HEAD#6721a0a260b508269400e14ed985b9572d6a1649",
+            .hash = "EtherStruct-0.0.0-2IZqnycvAAD0wvsT_6Vz1wlRxQHEWt3JDkseMO-2A3pZ",
         },
     },
     .paths = .{
