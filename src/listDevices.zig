@@ -35,4 +35,5 @@ pub fn listdevices(out: anytype) !void {
             dev = dev.?.next;
         }
     }
+    out.flush() catch |err| std.debug.print("Error: {}\n", .{err});
 }
