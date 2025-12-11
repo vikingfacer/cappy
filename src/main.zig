@@ -2,7 +2,7 @@ const std = @import("std");
 const pcap = @import("zapcap");
 const clap = @import("clap");
 const listdev = @import("listDevices.zig");
-const runner = @import("capture.zig");
+const pp = @import("packetPrinter.zig");
 
 pub fn main() !void {
     var stdout_buffer: [1024]u8 = undefined;
@@ -76,6 +76,32 @@ pub fn main() !void {
             }
         }
 
-        try runner.live(stdout, capture);
+        var fnCallBack: pcap.pcapHandler = &pp.callback;
+        if (res.args.program) |program| {
+            var seq = std.mem.splitSequence(u8, program, ":");
+            std.debug.print("{s} {s}", .{ seq.first(), seq.next().? });
+            const lib = seq.first();
+            const fun = seq.next().?;
+            if (try lookUp(lib, fun)) |fnct| {
+                fnCallBack = fnct;
+            }
+        }
+        _ = capture.loop(0, fnCallBack, null);
     }
+}
+
+pub fn lookUp(library: []const u8, function: []const u8) !?pcap.pcapHandler {
+    var buffer: [1000]u8 = undefined;
+    var fba = std.heap.FixedBufferAllocator.init(&buffer);
+    const lib: [:0]const u8 = try fba.allocator().dupeZ(u8, library);
+    errdefer fba.allocator().free(lib);
+    defer fba.allocator().free(lib);
+    const fun: [:0]const u8 = try fba.allocator().dupeZ(u8, function);
+    errdefer fba.allocator().free(fun);
+    defer fba.allocator().free(fun);
+
+    // need to dupZ these []u8 parameters
+    var dlib = try std.DynLib.open(lib);
+
+    return dlib.lookup(pcap.pcapHandler, fun);
 }
