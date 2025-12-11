@@ -100,7 +100,7 @@ pub const pcapture = struct {
         return PCAP_C.pcap_next_ex(self.cap, @alignCast(hdr), @alignCast(data));
     }
 
-    pub fn loop(self: Self, cnt: c_int, hdlr: ?*pcapHandler, user: [:0]u8) isize {
+    pub fn loop(self: Self, cnt: c_int, hdlr: pcapHandler, user: ?[*]u8) isize {
         return PCAP_C.pcap_loop(self.cap, cnt, hdlr, user);
     }
 
